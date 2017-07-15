@@ -15,7 +15,7 @@
         if (newSearch !== '' & newSearch !== '?') {
           newSearch += '&';
         }
-        newSearch += 'username=' + (prompt('What is your name?') || 'anonymous');
+        newSearch += 'username=' + (prompt('What is your name? (No spaces please)') || 'anonymous');
         window.location.search = newSearch;
       }
     </script>
@@ -28,18 +28,20 @@
     <h1>Chatterbox</h1>
     <div id="rooms">
       Room:
+    </div>
       <select id="roomSelect">
+        <option value ='Default room' > Lobby </option>
       </select>
       <form action="#" id="newroomform">
         <input type="text" name="newroomname" id="newroomname"/>
-        <button type="button" onclick="alert('Room added!')">Add a room</button>
+        <button type="button">Add a room</button>
       </form>
     </div>
     <form action="#" id="send" method="post">
       <input type="text" name="message" id="message"/>
       <input type="submit" name="submit" class="submit"/>
     </form>
-  </div>
+
   <div id="chats"></div>
 
   </body>

@@ -1,10 +1,67 @@
   var app = {};
 
-  app.init = function() {
-    $('.username').on('click', app.handleUsernameClick);
-    $('#send .submit').submit(app.handleSubmit);
+  var entityMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+    '/': '&#x2F;',
+    '`': '&#x60;',
+    '=': '&#x3D;'
   };
 
+  var escapeHtml = function (string) {
+    return String(string).replace(/[&<>"'`=\/]/g, function (s) {
+      return entityMap[s];
+    });
+  };
+
+  app.init = function() {
+    $('.username').on('click', app.handleUsernameClick);
+    var allMessages = app.fetch();
+    setTimeout(function() { 
+      cleanedMessages = allMessages.responseJSON.results;
+      var rooms = [];
+      $('#roomSelect option').each(function() {
+        rooms.push($(this).val());
+      });
+      for (var i = 0; i < cleanedMessages.length; i++) {
+        if (cleanedMessages[i]['roomname'] !== undefined && cleanedMessages[i]['username'] !== undefined && cleanedMessages[i]['text'] !== undefined){
+          if (rooms.indexOf(cleanedMessages[i]['roomname']) === -1) {
+            $('#roomSelect').append('<option value=' + escapeHtml(cleanedMessages[i]['roomname']) + '>' + escapeHtml(cleanedMessages[i]['roomname']) + '</option>');
+            rooms.push(cleanedMessages[i]['roomname']);
+          }
+          app.renderMessage(cleanedMessages[i]);
+        }
+      }
+    }, 1000);
+  };
+
+  $(function() {
+    $('#roomSelect').on('change', function() {
+      var currRoom = $('#roomSelect').find(':selected').text()
+      app.renderRoom(currRoom);
+    });
+  });
+
+
+  $(function() {
+    $('#send').on('submit', function(e) {
+      e.preventDefault();
+      var data = $('#send input').val();
+      app.handleSubmit(data);
+    });
+  });
+
+  $(function() {
+    $('#newroomform button').on('click', function(e) {
+      e.preventDefault();
+      var data = $('#newroomform input').val();
+      app.addRoom(data);
+    });
+  });
+  
   app.send = function(message) {
     $.ajax({
       url: 'http://parse.sfm6.hackreactor.com/chatterbox/classes/messages',
@@ -20,14 +77,17 @@
     });
   };
 
-  app.fetch = function(link) {
-    $.ajax({
-      url: link, 
+  app.fetch = function() {
+    return $.ajax({
+      url: 'http://parse.sfm6.hackreactor.com/chatterbox/classes/messages', 
       type: 'GET',
-      success: function () {
+      data: 'order=-createdAt',
+      dataType: 'JSON',
+      contentType: 'json',
+      success: function (data) {
         console.log('chatterbox: Message received');
       },
-      error: function () {
+      error: function (data) {
         console.error('chatterbox: Failed to send message');
       }
     });
@@ -38,48 +98,46 @@
   };
 
   app.renderMessage = function(message) {
-    $('#chats').append('<p> <span class ="username">' + 
-  JSON.stringify(message['username']) + '</span> <span class = "message">' + 
-  JSON.stringify(message['text']) + '</span> <span class = "roomname">' + 
-  JSON.stringify(message['roomname']) + '</span> </p>');
+    var name = escapeHtml(message.username);
+    var mess = escapeHtml(message.text);
+    var room = escapeHtml(message.roomname);
+    $('#chats').append(`<p> <span class="username">
+    ${name}</span> <span class="message">${mess}</span></p>`);
   };
 
   app.renderRoom = function(roomName) {
-    // call this function whenever the button add a room is clicked
-    $('#roomSelect').append('<option>' + JSON.stringify(roomName) + '</option>');
+    app.clearMessages();
+    var allMessages = app.fetch();
+    setTimeout(function() { 
+      for (var i = 0; i < cleanedMessages.length; i++) {
+        if (cleanedMessages[i]['roomname'] !== undefined && cleanedMessages[i]['username'] !== undefined && cleanedMessages[i]['text'] !== undefined){
+          if (cleanedMessages[i]['roomname'] === roomName) {
+            app.renderMessage(cleanedMessages[i]);
+          }
+        }
+      }
+    }, 1500);
+  };
+
+  app.addRoom = function(roomName) {
+    $('#roomSelect').append('<option>' + escapeHtml(roomName) + '</option>');
   };
 
   app.handleUsernameClick = function() {
-    // 
+    //
   };
 
-  var formInput = $(function() {
-    $('#send').on('submit', function(e) {
-      e.preventDefault();
-      var data = $('#send :input').serialize();
-      console.log(data);
-      return data;
-    });
-  });
-  
+  app.handleSubmit = function(message) {
+    var messageObject = {};
+    message = message.slice(message.indexOf('=') + 1, message.length);
+    messageObject['text'] = message;
+    messageObject['username'] = window.location.search.slice(window.location.search.indexOf('=') + 1, window.location.search.length);
+    messageObject['roomname'] = $('#roomSelect').find(':selected').text();
+    app.send(messageObject);
+    $('#chats').prepend(`<p> <span class="username">
+    ${messageObject['username']}</span> <span class="message">${messageObject['text']}</span></p>`);  };
 
-  app.handleSubmit = function() {
-    // find the message in the form 
-    console.log(formInput);
-    // $("form#send")
-    // var message = document.getElementById("send");
-    // console.log(message);
-    // // find the username from the url
-    // var username = window.location.search.slice(window.location.search.indexOf('=') + 1, window.location.search.length);
-    // find the room from the choice option
-    // call app.send() to send to server
-    // call render message to show message on site
-  };
-
-
-
-
-
+  app.init();
 
 
 
